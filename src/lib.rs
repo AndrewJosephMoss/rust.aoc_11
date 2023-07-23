@@ -16,6 +16,43 @@ struct Monkey {
     pub test_denom: u32,
     pub on_true_recipient_id: u32,
     pub on_false_recipient_id: u32,
+    pub inspection_count: u32,
+}
+
+impl Monkey {
+    pub fn inspect_item(&mut self) -> Result<u32> {
+        self.inspection_count += 1;
+        let item = self.items.pop().unwrap();
+    }
+
+    pub fn inspect_items(&mut self) {
+        self.items = self
+            .items
+            .iter()
+            .map(|x| {
+                self.inspection_count += 1;
+                match self.operation {
+                    Operation::Multiply(val) => x * val,
+                    Operation::Add(val) => x + val,
+                    Operation::Square => x * x,
+                }
+            })
+            // Divide worry level by 3 after inspection.
+            .map(|x| x / 3)
+            .collect::<Vec<u32>>();
+    }
+
+    pub fn test_and_throw(&mut self, monkeys: &mut Vec<Monkey>) {
+        while let Some(item) = self.items.pop() {
+            if item & self.test_denom == 0 {
+                monkeys[self.on_true_recipient_id as usize].items.push(item);
+            } else {
+                monkeys[self.on_false_recipient_id as usize]
+                    .items
+                    .push(item);
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -26,6 +63,11 @@ enum Operation {
 }
 
 pub fn process_part_1(input: &str) -> u32 {
+    let mut monkeys = parse_monkeys(input);
+    for monkey in &mut monkeys {
+        monkey.inspect_items();
+        monkey.test_and_throw(&mut monkeys);
+    }
     10605
 }
 
@@ -109,6 +151,7 @@ fn parse_monkey(input: &str) -> IResult<&str, Monkey> {
             test_denom: denom,
             on_true_recipient_id: true_recip,
             on_false_recipient_id: false_recip,
+            inspection_count: 0,
         },
     ))
 }
@@ -137,6 +180,7 @@ mod tests {
                 test_denom: 23,
                 on_true_recipient_id: 2,
                 on_false_recipient_id: 3,
+                inspection_count: 0,
             },
             Monkey {
                 id: 1,
@@ -145,6 +189,7 @@ mod tests {
                 test_denom: 19,
                 on_true_recipient_id: 2,
                 on_false_recipient_id: 0,
+                inspection_count: 0,
             },
             Monkey {
                 id: 2,
@@ -153,6 +198,7 @@ mod tests {
                 test_denom: 13,
                 on_true_recipient_id: 1,
                 on_false_recipient_id: 3,
+                inspection_count: 0,
             },
             Monkey {
                 id: 3,
@@ -161,6 +207,7 @@ mod tests {
                 test_denom: 17,
                 on_true_recipient_id: 0,
                 on_false_recipient_id: 1,
+                inspection_count: 0,
             },
         ];
         assert_eq!(monkeys, expected_monkeys);
@@ -177,6 +224,7 @@ mod tests {
             test_denom: 17,
             on_true_recipient_id: 0,
             on_false_recipient_id: 1,
+            inspection_count: 0,
         };
         assert_eq!(monkey, expected_monkey);
     }
