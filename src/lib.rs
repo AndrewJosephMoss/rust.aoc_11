@@ -20,37 +20,23 @@ struct Monkey {
 }
 
 impl Monkey {
-    pub fn inspect_item(&mut self) -> Result<u32> {
+    pub fn inspect_item(&mut self) -> Option<u32> {
         self.inspection_count += 1;
-        let item = self.items.pop().unwrap();
+        let mut x = self.items.pop()?;
+        x = match self.operation {
+            Operation::Multiply(val) => x * val,
+            Operation::Add(val) => x + val,
+            Operation::Square => x * x,
+        };
+        x = x / 3;
+        Some(x)
     }
 
-    pub fn inspect_items(&mut self) {
-        self.items = self
-            .items
-            .iter()
-            .map(|x| {
-                self.inspection_count += 1;
-                match self.operation {
-                    Operation::Multiply(val) => x * val,
-                    Operation::Add(val) => x + val,
-                    Operation::Square => x * x,
-                }
-            })
-            // Divide worry level by 3 after inspection.
-            .map(|x| x / 3)
-            .collect::<Vec<u32>>();
-    }
-
-    pub fn test_and_throw(&mut self, monkeys: &mut Vec<Monkey>) {
-        while let Some(item) = self.items.pop() {
-            if item & self.test_denom == 0 {
-                monkeys[self.on_true_recipient_id as usize].items.push(item);
-            } else {
-                monkeys[self.on_false_recipient_id as usize]
-                    .items
-                    .push(item);
-            }
+    pub fn get_recipient_id(&self, item: u32) -> u32 {
+        if item % self.test_denom == 0 {
+            return self.on_true_recipient_id;
+        } else {
+            return self.on_false_recipient_id;
         }
     }
 }
@@ -64,9 +50,12 @@ enum Operation {
 
 pub fn process_part_1(input: &str) -> u32 {
     let mut monkeys = parse_monkeys(input);
-    for monkey in &mut monkeys {
-        monkey.inspect_items();
-        monkey.test_and_throw(&mut monkeys);
+    for i in 0..monkeys.len() {
+        for _ in 0..monkeys[i].items.len() {
+            let item = monkeys.get_mut(i).unwrap().inspect_item().unwrap();
+            let recip_id = monkeys[i].get_recipient_id(item);
+            monkeys.get_mut(recip_id as usize).unwrap().items.push(item);
+        }
     }
     10605
 }
